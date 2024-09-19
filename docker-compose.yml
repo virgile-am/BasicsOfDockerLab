@@ -2,12 +2,12 @@ version: '3.8'
 
 services:
   app:
-    image: basics-docker-lab:latest
+    image: ${DOCKER_IMAGE:-vg1k2/basicsofdockerlab:v1.0}
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "4000:4000"
+      - "${SPRING_PORT:-4000}:4000"
     depends_on:
       - postgres
     environment:

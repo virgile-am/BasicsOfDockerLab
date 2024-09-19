@@ -3,11 +3,11 @@
 
      environment {
          DOCKER_IMAGE = 'vg1k2/basicsofdockerlab:v1.0'
+         CONTAINER_NAME = 'basicsofdockerlab'
          SPRING_PORT = '4000'
-         # PostgreSQL Database environment variables
-         DB_URL = 'jdbc:postgresql://dpg-crl725btq21c73e97u8g-a.oregon-postgres.render.com/jenkinsdatabase'
-         DB_USER = 'jenkinsdatabase_user'
-         DB_PASSWORD = 'NlQemNvYTRIfUS7cOhvSDgBM5Y53xNXY'
+         POSTGRES_DB = 'productdb'
+         POSTGRES_USER = 'postgres'
+         POSTGRES_PASSWORD = '1010'
      }
 
      stages {
@@ -47,10 +47,36 @@
          stage('Push Docker Image') {
              steps {
                  script {
-                     echo 'Pushing Docker image...'
+                     echo 'Pushing Docker image to Docker Hub...'
                      withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                          bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
                          bat "docker push %DOCKER_IMAGE%"
+                         bat "docker logout"
+                     }
+                 }
+             }
+         }
+
+         stage('Deploy with Docker Compose') {
+             steps {
+                 script {
+                     echo 'Deploying with Docker Compose...'
+                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                         bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+
+                         withEnv([
+                             "DOCKER_IMAGE=${DOCKER_IMAGE}",
+                             "SPRING_PORT=${SPRING_PORT}",
+                             "POSTGRES_DB=${POSTGRES_DB}",
+                             "POSTGRES_USER=${POSTGRES_USER}",
+                             "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+                         ]) {
+                             bat "docker-compose down"
+                             bat "docker-compose build app"
+                             bat "docker-compose up -d"
+                         }
+
+                         bat "docker logout"
                      }
                  }
              }
@@ -63,7 +89,7 @@
              cleanWs()
          }
          success {
-             echo 'Pipeline succeeded! The application has been built, tested, and Docker image pushed to DockerHub.'
+             echo 'Pipeline succeeded! The application has been built, tested, and deployed with Docker Compose.'
          }
          failure {
              echo 'Pipeline failed. Please check the console output to fix the issue.'
