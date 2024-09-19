@@ -3,10 +3,11 @@
 
      environment {
          DOCKER_IMAGE = 'vg1k2/basicsofdockerlab:v1.0'
-         CONTAINER_NAME = 'basicsofdockerlab'
          SPRING_PORT = '4000'
-         REMOTE_HOST = 'user@your-remote-docker-host'
-         REMOTE_DOCKER_SOCKET = '/var/run/docker.sock'
+         # PostgreSQL Database environment variables
+         DB_URL = 'jdbc:postgresql://dpg-crl725btq21c73e97u8g-a.oregon-postgres.render.com/jenkinsdatabase'
+         DB_USER = 'jenkinsdatabase_user'
+         DB_PASSWORD = 'NlQemNvYTRIfUS7cOhvSDgBM5Y53xNXY'
      }
 
      stages {
@@ -54,28 +55,6 @@
                  }
              }
          }
-
-         stage('Deploy to Remote Docker') {
-             steps {
-                 script {
-                     echo 'Deploying to remote Docker host...'
-                     withCredentials([sshUserPrivateKey(credentialsId: 'remote-docker-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-                         bat """
-                         ssh -i %SSH_KEY% -o StrictHostKeyChecking=no %REMOTE_HOST% "
-                             docker pull %DOCKER_IMAGE% &&
-                             docker stop %CONTAINER_NAME% || true &&
-                             docker rm %CONTAINER_NAME% || true &&
-                             docker run -d --name %CONTAINER_NAME% -p %SPRING_PORT%:4000 \
-                             -e SPRING_DATASOURCE_URL=jdbc:postgresql://your-render-postgres-host:5432/your-db-name \
-                             -e SPRING_DATASOURCE_USERNAME=your-username \
-                             -e SPRING_DATASOURCE_PASSWORD=your-password \
-                             %DOCKER_IMAGE%
-                         "
-                         """
-                     }
-                 }
-             }
-         }
      }
 
      post {
@@ -84,7 +63,7 @@
              cleanWs()
          }
          success {
-             echo 'Pipeline succeeded! The application has been built, tested, and deployed to the remote Docker host.'
+             echo 'Pipeline succeeded! The application has been built, tested, and Docker image pushed to DockerHub.'
          }
          failure {
              echo 'Pipeline failed. Please check the console output to fix the issue.'
